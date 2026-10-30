@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lintex Product Label Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: #172033;
+      background: #f3f6fa;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 12px clamp(16px, 4vw, 48px);
+      background: #fff;
+      border-bottom: 1px solid #e1e7ef;
+      box-shadow: 0 2px 8px #1720330b;
+    }
+
+    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .brand img { display: block; width: 140px; max-height: 48px; object-fit: contain; }
+    .brand-copy { border-left: 1px solid #dfe5ec; padding-left: 14px; }
+    .brand-copy h1 { margin: 0; font-size: 15px; line-height: 1.35; }
+    .brand-copy p { margin: 2px 0 0; color: #68758a; font-size: 12px; }
+    .top-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .button {
+      border: 1px solid #d8e0e9;
+      border-radius: 9px;
+      padding: 9px 13px;
+      background: #fff;
+      color: #243248;
+      font-size: 12px;
+      font-weight: 700;
+      transition: background .15s, transform .15s;
+    }
+    .button:hover { background: #f1f5f9; }
+    .button:active { transform: scale(.98); }
+    .button.primary { border-color: #173c79; background: #173c79; color: #fff; }
+    .button.primary:hover { background: #102e61; }
+    .button.blue { border-color: #d6e4f8; background: #eff6ff; color: #173c79; }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(280px, 430px) minmax(0, 1fr);
+      align-items: start;
+      gap: 22px;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 26px 22px 40px;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid #e1e7ef;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 5px 18px #17203309;
+    }
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 19px 21px;
+      border-bottom: 1px solid #edf0f4;
+    }
+    .panel-heading h2 { margin: 0; font-size: 15px; }
+    .panel-heading p { margin: 4px 0 0; color: #728096; font-size: 12px; }
+    .status {
+      white-space: nowrap;
+      padding: 5px 9px;
+      border: 1px solid #cae9dd;
+      border-radius: 20px;
+      background: #effaf5;
+      color: #16704c;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .form-content { padding: 21px; }
+    .field { margin-bottom: 20px; }
+    .field label, .sizes-title {
+      display: block;
+      margin-bottom: 7px;
+      color: #344158;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .field input {
+      width: 100%;
+      border: 1px solid #cfd8e3;
+      border-radius: 9px;
+      padding: 11px 12px;
+      outline: none;
+      color: #172033;
+      font-size: 14px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus {
+      border-color: #2e64a4;
+      box-shadow: 0 0 0 3px #2e64a41a;
+    }
+    .size-box {
+      border: 1px solid #e0e6ee;
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .size-box p { margin: 0 0 12px; color: #738096; font-size: 11px; }
+    .size-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .color-options {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .size-option {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 40px;
+      border: 1px solid #dce3ec;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      color: #35435a;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .size-option:has(input:checked) {
+      border-color: #2e64a4;
+      background: #eff6ff;
+      color: #173c79;
+    }
+    .size-option input {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: #173c79;
+      cursor: pointer;
+    }
+    .color-box {
+      margin: 0;
+      border: 1px solid #e0e6ee;
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .color-box legend { padding: 0 5px; }
+    .color-box .color-option { min-width: 0; }
+    .custom-color {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .custom-color input {
+      min-width: 0;
+      flex: 1;
+      border: 1px solid #cfd8e3;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font: inherit;
+      font-size: 12px;
+    }
+    .form-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #edf0f4;
+    }
+    .form-footer span { color: #728096; font-size: 11px; }
+
+    .preview-panel { position: sticky; top: 88px; }
+    .preview-content { padding: 22px; }
+    .preview-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .preview-toolbar h2 { margin: 0; font-size: 14px; }
+    .zoom { display: flex; align-items: center; gap: 5px; }
+    .zoom span { margin-right: 3px; color: #728096; font-size: 11px; }
+    .zoom button {
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: #f1f4f8;
+      color: #4a5870;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .zoom button.active { background: #e8f1ff; color: #173c79; }
+    .stage {
+      display: flex;
+      min-height: 350px;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      border: 1px solid #e1e7ef;
+      border-radius: 12px;
+      background-color: #f7f9fc;
+      background-image: linear-gradient(45deg, #edf1f6 25%, transparent 25%), linear-gradient(-45deg, #edf1f6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #edf1f6 75%), linear-gradient(-45deg, transparent 75%, #edf1f6 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      padding: 36px;
+    }
+    .label-wrap { flex: 0 0 auto; transform: scale(1.5); transform-origin: center; }
+    #labelSvg {
+      display: block;
+      width: 80mm;
+      height: 50mm;
+      overflow: hidden;
+      border-radius: 2mm;
+      background: #fff;
+      box-shadow: 0 8px 26px #15233b26;
+      font-family: Arial, sans-serif;
+    }
+    .dimensions {
+      display: flex;
+      justify-content: space-between;
+      margin: 12px 2px 0;
+      color: #758197;
+      font-size: 11px;
+    }
+    .preview-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 20px; }
+    .preview-actions .button { padding: 12px 8px; }
+    #printArea { display: none; }
+
+    @media (max-width: 800px) {
+      .topbar { position: static; align-items: flex-start; }
+      .brand img { width: 110px; }
+      .brand-copy { display: none; }
+      main { grid-template-columns: 1fr; padding: 18px 14px 28px; }
+      .preview-panel { position: static; }
+      .stage { min-height: 270px; padding: 25px; }
+      .label-wrap { transform: scale(1.2); }
+    }
+    @media (max-width: 480px) {
+      .topbar { flex-direction: column; gap: 12px; }
+      .top-actions { width: 100%; }
+      .top-actions .button { flex: 1; }
+      .size-options, .color-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .preview-content { padding: 15px; }
+      .preview-toolbar { align-items: flex-start; flex-direction: column; }
+      .stage { min-height: 235px; padding: 16px; }
+      .label-wrap { transform: scale(.95); }
+      .preview-actions { grid-template-columns: 1fr; }
+    }
+    @media print {
+      @page { size: 80mm 50mm; margin: 0; }
+      html, body {
+        width: 80mm !important;
+        height: 50mm !important;
+        min-width: 0 !important;
+        max-width: 80mm !important;
+        min-height: 0 !important;
+        max-height: 50mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
+      }
+      body * { display: none !important; }
+      #printArea, #printImage {
+        display: block !important;
+        visibility: visible !important;
+      }
+      #printArea {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 80mm;
+        height: 50mm;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+      }
+      #printImage {
+        width: 80mm !important;
+        height: 50mm !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        object-fit: fill;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/lintex-logo.png" alt="Lintex Medical Wear, Uniforms and Fashion">
+      <div class="brand-copy">
+        <h1>Product Label Generator</h1>
+        <p>Custom product sizes and color</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="button" id="resetButton" type="button">Reset</button>
+      <button class="button blue" id="pngHeaderButton" type="button">Download PNG</button>
+      <button class="button primary" id="printHeaderButton" type="button">Print Label</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Product details</h2>
+          <p>Edit the name, color and available sizes</p>
+        </div>
+        <span class="status">LIVE PREVIEW</span>
+      </div>
+      <div class="form-content">
+        <div class="field">
+          <label for="productName">Product name</label>
+          <input id="productName" type="text" value="Classic T-Shirt" maxlength="60" autocomplete="off">
+        </div>
+        <fieldset class="size-box" style="border: 1px solid #e0e6ee">
+          <legend class="sizes-title">Available sizes</legend>
+          <p>Tick every size available for this product.</p>
+          <div class="size-options" id="sizeOptions"></div>
+        </fieldset>
+        <fieldset class="color-box" style="margin-top: 18px">
+          <legend class="sizes-title">Available colours (tick one)</legend>
+          <div class="color-options" id="colorOptions"></div>
+          <div class="custom-color">
+            <input id="customColor" type="text" maxlength="24" placeholder="Add a custom colour" aria-label="Custom colour name">
+            <button class="button" id="addColorButton" type="button">Add</button>
+          </div>
+        </fieldset>
+        <div class="form-footer">
+          <span id="selectedCount">0 sizes selected · 1 colour selected</span>
+          <button class="button" id="clearSizesButton" type="button">Clear sizes</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Label preview</h2>
+          <p>Print size: 80 × 50 mm (8 × 5 cm)</p>
+        </div>
+        <span class="status">80 × 50 mm</span>
+      </div>
+      <div class="preview-content">
+        <div class="preview-toolbar">
+          <h2>Live preview</h2>
+          <div class="zoom" aria-label="Preview scale">
+            <span>Scale:</span>
+            <button type="button" data-scale="1">100%</button>
+            <button class="active" type="button" data-scale="1.5">150%</button>
+            <button type="button" data-scale="2">200%</button>
+          </div>
+        </div>
+        <div class="stage">
+          <div class="label-wrap" id="labelWrap">
+            <svg id="labelSvg" viewBox="0 0 800 500" width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+              <rect width="800" height="500" rx="18" fill="#ffffff"/>
+              <rect x="5" y="5" width="790" height="490" rx="17" fill="none" stroke="#171717" stroke-width="3"/>
+              <image id="svgLogo" x="685" y="27" width="86" height="33" href="assets/lintex-logo.png" preserveAspectRatio="xMaxYMid meet"/>
+              <text x="38" y="62" fill="#171717" font-size="21">Product Name:</text>
+              <text id="svgProductName" x="38" y="111" fill="#111111" font-size="34" font-weight="700">Classic T-Shirt</text>
+              <line x1="6" y1="145" x2="794" y2="145" stroke="#171717" stroke-width="1.5"/>
+              <text x="38" y="177" fill="#171717" font-size="21" font-weight="700">Size:</text>
+              <text x="91" y="177" fill="#171717" font-size="20">(Tick ✓ One or more)</text>
+              <g id="svgSizes"></g>
+              <line x1="6" y1="241" x2="794" y2="241" stroke="#171717" stroke-width="1.5"/>
+              <text x="38" y="278" fill="#171717" font-size="21" font-weight="700">Colour:</text>
+              <text x="120" y="278" fill="#171717" font-size="20">(Tick ✓ One)</text>
+              <g id="svgColors"></g>
+            </svg>
+          </div>
+        </div>
+        <div class="dimensions">
+          <span>80 mm wide</span>
+          <span>50 mm high</span>
+        </div>
+        <div class="preview-actions">
+          <button class="button primary" id="printButton" type="button">Print 8 × 5 cm</button>
+          <button class="button" id="pdfButton" type="button">Download PDF</button>
+          <button class="button" id="pngButton" type="button">Download PNG</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="printArea" aria-hidden="true">
+    <img id="printImage" alt="">
+  </div>
+
+  <script>
+    (() => {
+      const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+      const defaultColors = [
+        'Air Force', 'Berry Rouge', 'Black', 'Camel',
+        'Cool Azure', 'Cool Jade', 'Dark Green', 'Dark Grey',
+        'Healing Leaf', 'Light Grey', 'Light Pink', 'Navy Blue',
+        'Olive Green', 'Sea Green', 'Slate Blue', 'Surgical Teal',
+        'Wine', 'Teal Core'
+      ];
+      const colorChoices = [...defaultColors];
+      const sizeOptions = document.getElementById('sizeOptions');
+      const colorOptions = document.getElementById('colorOptions');
+      const productName = document.getElementById('productName');
+      const svgSizes = document.getElementById('svgSizes');
+      const svgColors = document.getElementById('svgColors');
+      const svgNamespace = 'http://www.w3.org/2000/svg';
+      const labelWrap = document.getElementById('labelWrap');
+      let selectedColor = 'Navy Blue';
+
+      sizes.forEach((size) => {
+        const label = document.createElement('label');
+        label.className = 'size-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = size;
+        checkbox.checked = ['S', 'M', 'L', 'XL'].includes(size);
+        checkbox.addEventListener('change', updateLabel);
+        label.append(checkbox, document.createTextNode(size));
+        sizeOptions.append(label);
+      });
+
+      function renderColorOptions() {
+        colorOptions.replaceChildren();
+        colorChoices.forEach((color) => {
+          const label = document.createElement('label');
+          label.className = 'size-option color-option';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = color;
+          checkbox.checked = selectedColor === color;
+          checkbox.addEventListener('change', () => {
+            selectedColor = checkbox.checked ? color : null;
+            renderColorOptions();
+            updateLabel();
+          });
+          label.append(checkbox, document.createTextNode(color));
+          colorOptions.append(label);
+        });
+      }
+
+      function updateLabel() {
+        const name = productName.value.trim() || 'Product name';
+        const selected = [...sizeOptions.querySelectorAll('input:checked')].map((checkbox) => checkbox.value);
+        document.getElementById('svgProductName').textContent = name;
+        document.getElementById('selectedCount').textContent = `${selected.length} ${selected.length === 1 ? 'size' : 'sizes'} selected · ${selectedColor ? '1 colour' : '0 colours'} selected`;
+        svgSizes.replaceChildren();
+        svgColors.replaceChildren();
+
+        sizes.forEach((size, index) => {
+          const x = 40 + index * 103;
+          const boxY = 194;
+          const group = document.createElementNS(svgNamespace, 'g');
+          const rect = document.createElementNS(svgNamespace, 'rect');
+          rect.setAttribute('x', String(x));
+          rect.setAttribute('y', String(boxY));
+          rect.setAttribute('width', '23');
+          rect.setAttribute('height', '23');
+          rect.setAttribute('rx', '3');
+          rect.setAttribute('fill', '#fff');
+          rect.setAttribute('stroke', '#171717');
+          rect.setAttribute('stroke-width', '2.5');
+          group.append(rect);
+
+          if (selected.includes(size)) {
+            const check = document.createElementNS(svgNamespace, 'path');
+            check.setAttribute('d', `M${x + 5} ${boxY + 12} l5 5 10 -12`);
+            check.setAttribute('fill', 'none');
+            check.setAttribute('stroke', '#171717');
+            check.setAttribute('stroke-width', '2.5');
+            check.setAttribute('stroke-linecap', 'round');
+            check.setAttribute('stroke-linejoin', 'round');
+            group.append(check);
+          }
+
+          const text = document.createElementNS(svgNamespace, 'text');
+          text.setAttribute('x', String(x + 34));
+          text.setAttribute('y', String(boxY + 18));
+          text.setAttribute('fill', '#171717');
+          text.setAttribute('font-size', '20');
+          text.textContent = size;
+          group.append(text);
+          svgSizes.append(group);
+        });
+
+        colorChoices.forEach((color, index) => {
+          const column = index % 4;
+          const row = Math.floor(index / 4);
+          const x = [38, 230, 422, 614][column];
+          const y = 301 + row * 35;
+          const isSelected = selectedColor === color;
+          const group = document.createElementNS(svgNamespace, 'g');
+          const rect = document.createElementNS(svgNamespace, 'rect');
+          rect.setAttribute('x', String(x));
+          rect.setAttribute('y', String(y));
+          rect.setAttribute('width', '22');
+          rect.setAttribute('height', '22');
+          rect.setAttribute('rx', '3');
+          rect.setAttribute('fill', '#fff');
+          rect.setAttribute('stroke', '#171717');
+          rect.setAttribute('stroke-width', '2.5');
+          group.append(rect);
+
+          if (isSelected) {
+            const check = document.createElementNS(svgNamespace, 'path');
+            check.setAttribute('d', `M${x + 4} ${y + 11} l5 5 10 -12`);
+            check.setAttribute('fill', 'none');
+            check.setAttribute('stroke', '#171717');
+            check.setAttribute('stroke-width', '2.5');
+            check.setAttribute('stroke-linecap', 'round');
+            check.setAttribute('stroke-linejoin', 'round');
+            group.append(check);
+          }
+
+          const text = document.createElementNS(svgNamespace, 'text');
+          text.setAttribute('x', String(x + 34));
+          text.setAttribute('y', String(y + 18));
+          text.setAttribute('fill', '#171717');
+          text.setAttribute('font-size', '16');
+          text.textContent = color;
+          group.append(text);
+          svgColors.append(group);
+          if (text.getComputedTextLength() > 130) {
+            text.setAttribute('textLength', '130');
+            text.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+          }
+        });
+      }
+
+      async function getLogoDataUrl() {
+        const logo = document.querySelector('.brand img');
+        if (!logo.complete) {
+          await new Promise((resolve, reject) => {
+            logo.addEventListener('load', resolve, { once: true });
+            logo.addEventListener('error', () => reject(new Error('Could not load the Lintex logo. Check that assets/lintex-logo.png is available.')), { once: true });
+          });
+        }
+        if (!logo.naturalWidth) throw new Error('Could not load the Lintex logo. Check that assets/lintex-logo.png is available.');
+
+        const canvas = document.createElement('canvas');
+        canvas.width = logo.naturalWidth;
+        canvas.height = logo.naturalHeight;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Could not prepare the Lintex logo for export.');
+        context.drawImage(logo, 0, 0);
+        return canvas.toDataURL('image/png');
+      }
+
+      async function getSvgDataUrl() {
+        const svg = document.getElementById('labelSvg').cloneNode(true);
+        const logo = svg.querySelector('#svgLogo');
+        logo.setAttribute('href', await getLogoDataUrl());
+        svg.setAttribute('xmlns', svgNamespace);
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+      }
+
+      async function getLabelImageDataUrl() {
+        const svgDataUrl = await getSvgDataUrl();
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 750;
+            const context = canvas.getContext('2d');
+            if (!context) {
+              reject(new Error('Could not create an image canvas.'));
+              return;
+            }
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            try {
+              resolve(canvas.toDataURL('image/png'));
+            } catch (error) {
+              reject(new Error(`Could not export the label image. Open this page through a local web server and try again. ${error.message}`));
+            }
+          };
+          image.onerror = () => reject(new Error('Could not render the label. Check that the Lintex logo file is available.'));
+          image.src = svgDataUrl;
+        });
+      }
+
+      async function printLabel() {
+        const printImage = document.getElementById('printImage');
+        try {
+          printImage.src = await getLabelImageDataUrl();
+          await printImage.decode();
+          window.print();
+        } catch (error) {
+          console.error('Print failed:', error);
+          alert(`Could not prepare the label for printing. ${error.message}`);
+        }
+      }
+
+      async function downloadPng() {
+        try {
+          const imageData = await getLabelImageDataUrl();
+          const link = document.createElement('a');
+          link.href = imageData;
+          link.download = 'Lintex_Product_Label_8x5cm.png';
+          link.click();
+        } catch (error) {
+          console.error('PNG export failed:', error);
+          alert(error.message);
+        }
+      }
+
+      async function downloadPdf() {
+        try {
+          if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error('PDF tools did not load. Check your internet connection and try again.');
+          }
+          const imageData = await getLabelImageDataUrl();
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [80, 50] });
+          pdf.addImage(imageData, 'PNG', 0, 0, 80, 50);
+          pdf.save('Lintex_Product_Label_8x5cm.pdf');
+        } catch (error) {
+          console.error('PDF export failed:', error);
+          alert(error.message);
+        }
+      }
+
+      productName.addEventListener('input', updateLabel);
+      document.getElementById('customColor').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addColor();
+        }
+      });
+      function addColor() {
+        const input = document.getElementById('customColor');
+        const color = input.value.trim();
+        if (!color) return;
+        if (colorChoices.some((choice) => choice.toLowerCase() === color.toLowerCase())) {
+          alert('This colour is already in the list.');
+          return;
+        }
+        if (colorChoices.length >= 20) {
+          alert('A maximum of 20 colours can fit on one label.');
+          return;
+        }
+        colorChoices.push(color);
+        selectedColor = color;
+        input.value = '';
+        renderColorOptions();
+        updateLabel();
+      }
+      document.getElementById('addColorButton').addEventListener('click', addColor);
+      document.getElementById('clearSizesButton').addEventListener('click', () => {
+        sizeOptions.querySelectorAll('input').forEach((checkbox) => { checkbox.checked = false; });
+        updateLabel();
+      });
+      document.getElementById('resetButton').addEventListener('click', () => {
+        productName.value = 'Classic T-Shirt';
+        document.getElementById('customColor').value = '';
+        colorChoices.splice(0, colorChoices.length, ...defaultColors);
+        selectedColor = 'Navy Blue';
+        sizeOptions.querySelectorAll('input').forEach((checkbox) => {
+          checkbox.checked = ['S', 'M', 'L', 'XL'].includes(checkbox.value);
+        });
+        renderColorOptions();
+        updateLabel();
+      });
+      document.querySelectorAll('[data-scale]').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('[data-scale]').forEach((scaleButton) => scaleButton.classList.remove('active'));
+          button.classList.add('active');
+          labelWrap.style.transform = `scale(${button.dataset.scale})`;
+        });
+      });
+      document.getElementById('printButton').addEventListener('click', printLabel);
+      document.getElementById('printHeaderButton').addEventListener('click', printLabel);
+      document.getElementById('pdfButton').addEventListener('click', downloadPdf);
+      document.getElementById('pngButton').addEventListener('click', downloadPng);
+      document.getElementById('pngHeaderButton').addEventListener('click', downloadPng);
+
+      renderColorOptions();
+      updateLabel();
+    })();
+  </script>
+</body>
+</html>
